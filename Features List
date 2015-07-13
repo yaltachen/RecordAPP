@@ -1,0 +1,25 @@
+Record Features：
+1．	Record
+a)	StartRecord
+b)	PauseRecord
+c)	StopRecord
+d)	nameRecord
+e)	backgroundRecord
+Q：The limite the min and max record time?
+I think we can limite the max time to 2 hours.
+Note:Continue record when screen locked.
+
+2．	Play
+a)	Play
+b)	Pause
+c)	Stop
+d)	selectRecordings
+e)	listRecordEntries  (if the entries more than 10,this list can scroll)
+Note: If click the home key the record which you are playing will be paused. And when use the App again, click the play button the record will continue playing.
+
+3．	Share
+a)	Send the records to other App
+
+4．	Edit
+a)	DeleteRecord
+b)	RenameRocord
