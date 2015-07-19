@@ -2,13 +2,17 @@ package com.example.asus.recordv01;
 
 
 import android.app.Activity;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.media.MediaMetadata;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.os.Environment;
+import android.preference.DialogPreference;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.support.v7.app.AlertDialog;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -16,6 +20,7 @@ import android.widget.Adapter;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -33,13 +38,12 @@ public class RecordingListActivity extends ActionBarActivity {
     private ListView lv;
     private ListAdapter myAdapter;
 //    private ArrayList<String> list;
-    private Button btnGoback;
-    private Button btnDelete;
-    private Button btnShare;
+    private ImageView btnGoback;
+    private ImageView btnDelete;
+    private ImageView btnShare;
     private int checkNum;
-    private TextView tvShow;
     private boolean isMulChoic;       // is in MulState State
-
+    private Context context;
     private List<Map<String,Object>> mData = new ArrayList<Map<String,Object>>();
 
 
@@ -48,7 +52,7 @@ public class RecordingListActivity extends ActionBarActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_recordinglist);
-
+        context = this;
         getView();
 
         initDate();
@@ -75,13 +79,27 @@ public class RecordingListActivity extends ActionBarActivity {
         btnDelete.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                for (int i = 0; i < myAdapter.getCount(); i++) {
-                    if (myAdapter.getIsSelected().get(i)) {
-                        myAdapter.getIsSelected().put(i, false);
-                        checkNum--;
-                    }
-                }
-                dataChanged();
+                new AlertDialog.Builder(context).setTitle("Confirm")
+                        .setMessage("Do you really want to delete these recordings")
+                        .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        for (int i = 0; i < myAdapter.getCount(); i++) {
+                            if (myAdapter.getIsSelected().get(i)) {
+                                Object filePath = ((Map<String, Object>) myAdapter.getItem(i)).get("fileName");
+                                File file = new File(Environment.getExternalStorageDirectory() + "/Recordings/" + String.valueOf(filePath));
+                                if (file.exists()) {
+                                    file.delete();
+                                }
+                                myAdapter.getIsSelected().put(i, false);
+                                mData.remove(i);
+                                checkNum--;
+                            }
+                        }
+                        dataChanged();
+                    }})
+                .setNegativeButton("cancel",null)
+                .show();
             }
         });
 
@@ -166,10 +184,9 @@ public class RecordingListActivity extends ActionBarActivity {
 
     private void getView()
     {
-        btnGoback = (Button) findViewById(R.id.btnGoBack);
-        btnDelete = (Button) findViewById(R.id.btnDelete);
-        btnShare = (Button) findViewById(R.id.btnShare);
-        tvShow = (TextView) findViewById(R.id.txtSelectedCount);
+        btnGoback = (ImageView) findViewById(R.id.btnGoBack);
+        btnDelete = (ImageView) findViewById(R.id.btnDelete);
+        btnShare = (ImageView) findViewById(R.id.btnShare);
         lv = (ListView) findViewById(R.id.listView);
     }
 
@@ -202,7 +219,6 @@ public class RecordingListActivity extends ActionBarActivity {
             btnDelete.setVisibility(View.INVISIBLE);
             btnShare.setVisibility(View.INVISIBLE);
             btnGoback.setVisibility(View.INVISIBLE);
-            tvShow.setVisibility(View.VISIBLE);
 
             myAdapter.setMulChoic(false);
         }
@@ -211,11 +227,9 @@ public class RecordingListActivity extends ActionBarActivity {
             btnDelete.setVisibility(View.VISIBLE);
             btnShare.setVisibility(View.VISIBLE);
             btnGoback.setVisibility(View.VISIBLE);
-            tvShow.setVisibility(View.INVISIBLE);
             myAdapter.setMulChoic(true);
         }
         myAdapter.notifyDataSetChanged();
-        tvShow.setText("select" + checkNum);
     }
 
     public static long getAmrDuration(File file) throws IOException {

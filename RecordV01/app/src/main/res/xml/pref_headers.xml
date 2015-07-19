@@ -5,12 +5,12 @@
     <header android:fragment="com.example.asus.recordv01.SettingsActivity$GeneralPreferenceFragment"
         android:title="@string/pref_header_general" />
 
-    <header
-        android:fragment="com.example.asus.recordv01.SettingsActivity$NotificationPreferenceFragment"
-        android:title="@string/pref_header_notifications" />
+    <!--<header-->
+        <!--android:fragment="com.example.asus.recordv01.SettingsActivity$NotificationPreferenceFragment"-->
+        <!--android:title="@string/pref_header_notifications" />-->
 
-    <header
-        android:fragment="com.example.asus.recordv01.SettingsActivity$DataSyncPreferenceFragment"
-        android:title="@string/pref_header_data_sync" />
+    <!--<header-->
+        <!--android:fragment="com.example.asus.recordv01.SettingsActivity$DataSyncPreferenceFragment"-->
+        <!--android:title="@string/pref_header_data_sync" />-->
 
 </preference-headers>

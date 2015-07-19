@@ -197,10 +197,6 @@ public class MainActivity extends ActionBarActivity implements  Runnable{
         return super.onOptionsItemSelected(item);
     }
 
-
-
-
-
     public String createTempFileName()
     {
         SimpleDateFormat sdf = new SimpleDateFormat("hh-mm-ss-mmm");
