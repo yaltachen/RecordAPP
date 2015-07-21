@@ -7,6 +7,7 @@
     android:layout_gravity="top"
     tools:context="com.example.asus.myapplication.RecordinglistActivity">
 
+
     <ListView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

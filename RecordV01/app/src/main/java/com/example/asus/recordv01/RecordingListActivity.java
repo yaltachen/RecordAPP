@@ -8,11 +8,14 @@ import android.content.Intent;
 import android.media.MediaMetadata;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Environment;
 import android.preference.DialogPreference;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
+import android.support.v7.widget.SearchView;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -37,11 +40,9 @@ public class RecordingListActivity extends ActionBarActivity {
 
     private ListView lv;
     private ListAdapter myAdapter;
-//    private ArrayList<String> list;
     private ImageView btnGoback;
     private ImageView btnDelete;
     private ImageView btnShare;
-    private int checkNum;
     private boolean isMulChoic;       // is in MulState State
     private Context context;
     private List<Map<String,Object>> mData = new ArrayList<Map<String,Object>>();
@@ -54,24 +55,21 @@ public class RecordingListActivity extends ActionBarActivity {
         setContentView(R.layout.activity_recordinglist);
         context = this;
         getView();
-
         initDate();
-
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         myAdapter = new ListAdapter(mData,this);
         lv.setAdapter(myAdapter);
 
         btnGoback.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                isMulChoic = false;
-                for (int i = 0; i < myAdapter.getCount(); i++) {
-                    if (myAdapter.getIsSelected().get(i)) {
-                        myAdapter.getIsSelected().put(i, false);
-                        checkNum--;
-                    }
+            isMulChoic = false;
+            for (int i = 0; i < myAdapter.getCount(); i++) {
+                if (myAdapter.getIsSelected().get(i)) {
+                    myAdapter.getIsSelected().put(i, false);
                 }
-                dataChanged();
-
+            }
+            dataChanged();
             }
         });
 
@@ -82,24 +80,24 @@ public class RecordingListActivity extends ActionBarActivity {
                 new AlertDialog.Builder(context).setTitle("Confirm")
                         .setMessage("Do you really want to delete these recordings")
                         .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        for (int i = 0; i < myAdapter.getCount(); i++) {
-                            if (myAdapter.getIsSelected().get(i)) {
-                                Object filePath = ((Map<String, Object>) myAdapter.getItem(i)).get("fileName");
-                                File file = new File(Environment.getExternalStorageDirectory() + "/Recordings/" + String.valueOf(filePath));
-                                if (file.exists()) {
-                                    file.delete();
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                for (int i = 0; i < myAdapter.getCount(); i++) {
+                                    if (myAdapter.getIsSelected().get(i)) {
+                                        Object filePath = ((Map<String, Object>) myAdapter.getItem(i)).get("fileName");
+                                        File file = new File(Environment.getExternalStorageDirectory() + "/Recordings/" + String.valueOf(filePath));
+                                        if (file.exists()) {
+                                            file.delete();
+                                        }
+                                        mData.remove(i);
+                                        myAdapter.getIsSelected().put(i, false);
+                                    }
                                 }
-                                myAdapter.getIsSelected().put(i, false);
-                                mData.remove(i);
-                                checkNum--;
+                                dataChanged();
                             }
-                        }
-                        dataChanged();
-                    }})
-                .setNegativeButton("cancel",null)
-                .show();
+                        })
+                        .setNegativeButton("cancel", null)
+                        .show();
             }
         });
 
@@ -107,20 +105,20 @@ public class RecordingListActivity extends ActionBarActivity {
         btnShare.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
-
-                Intent intent = new Intent(Intent.ACTION_SEND);
-                intent.setType("text/plain");
-                intent.putExtra(Intent.EXTRA_SUBJECT,"ÂàÜ‰∫´");
-                intent.putExtra(Intent.EXTRA_TEXT,"text");
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(Intent.createChooser(intent,getTitle()));
-
-//                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-//                intent.setType("audio/amr");
-//                intent.setClassName("com.android.soundrecorder",
-//                        "com.android.soundrecorder.SoundRecorder");
-//                startActivity(Intent.createChooser(intent,getTitle()));
+                Intent share = new Intent(Intent.ACTION_SEND);
+                share.putExtra(share.EXTRA_STREAM, Uri.fromFile(new File(
+                        Environment.getExternalStorageDirectory()
+                                + "/Recordings/" + "Âº†ÈùìÈ¢ñ - All Of Me.mp3"
+                )));
+                share.setType("audio/*");
+                share.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(Intent.createChooser(share,"Share Voice Memo"));
+//                Intent intent = new Intent(Intent.ACTION_SEND);
+//                intent.setType("text/plain");
+//                intent.putExtra(Intent.EXTRA_SUBJECT,"ÂàÜ‰∫´");
+//                intent.putExtra(Intent.EXTRA_TEXT,"text");
+//
+//                startActivity(Intent.createChooser(intent, getTitle()));
             }
         });
 
@@ -135,12 +133,17 @@ public class RecordingListActivity extends ActionBarActivity {
 
                 ListAdapter.getIsSelected().put(position, holder.cb.isChecked());
 
-                if(!isMulChoic) {
-                    Intent intent = new Intent(RecordingListActivity.this, PlayingRecordPlay.class);
-                    startActivity(intent);
-                    Object fileName = ((Map<String,Object>)myAdapter.getItem(position)).get("fileName");
+                if (!isMulChoic) {
+//                    ÊµãËØï‰ª£Á†Å
+                    Intent intent = new Intent(RecordingListActivity.this, PlayingActivity.class);
+                    Object fileName = ((Map<String, Object>) myAdapter.getItem(position)).get("fileName");
                     intent.putExtra("fileName", String.valueOf(fileName));
-                    startActivity(intent);
+                    startActivityForResult(intent,0);
+//                    ÂèØ‰ª•Áî®ÁöÑ‰ª£Á†Å
+//                    Intent intent = new Intent(RecordingListActivity.this, PlayingActivity.class);
+//                    Object fileName = ((Map<String, Object>) myAdapter.getItem(position)).get("fileName");
+//                    intent.putExtra("fileName", String.valueOf(fileName));
+//                    startActivity(intent);
                 }
             }
         });
@@ -161,9 +164,41 @@ public class RecordingListActivity extends ActionBarActivity {
     }
 
     @Override
+    protected  void onActivityResult(int requestCode, int resultCode, Intent data)
+    {
+        switch (resultCode){
+            case RESULT_OK:
+                dataChanged();
+                break;
+            default:
+                break;
+        }
+    }
+
+
+
+    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_recordinglist, menu);
+        MenuItem searchItem=menu.findItem(R.id.action_search);
+        final SearchView searchView=(SearchView) MenuItemCompat.getActionView(searchItem);
+
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+
+            @Override
+            public boolean onQueryTextSubmit(String arg0) {
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String arg0) {
+//                if (actionOperationListener != null) {
+//                    actionOperationListener.onSearchFile(arg0)
+//              }
+                return false;
+            }
+        });
         return true;
     }
 
@@ -178,6 +213,11 @@ public class RecordingListActivity extends ActionBarActivity {
         if (id == R.id.action_settings) {
             return true;
         }
+        if(id == android.R.id.home)
+        {
+            finish();
+            return false;
+        }
 
         return super.onOptionsItemSelected(item);
     }
@@ -190,7 +230,7 @@ public class RecordingListActivity extends ActionBarActivity {
         lv = (ListView) findViewById(R.id.listView);
     }
 
-    // ÂàùÂßãÂåñÊï∞Êç?
+    // ÂàùÂßãÂåñÊï∞ÔøΩ?
     private void initDate(){
         File fileDir = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Recordings");
         File[] fileList = fileDir.listFiles();
@@ -219,7 +259,6 @@ public class RecordingListActivity extends ActionBarActivity {
             btnDelete.setVisibility(View.INVISIBLE);
             btnShare.setVisibility(View.INVISIBLE);
             btnGoback.setVisibility(View.INVISIBLE);
-
             myAdapter.setMulChoic(false);
         }
         else
@@ -238,12 +277,12 @@ public class RecordingListActivity extends ActionBarActivity {
         RandomAccessFile randomAccessFile = null;
         try {
             randomAccessFile = new RandomAccessFile(file, "rw");
-            long length = file.length();//Œƒº˛µƒ≥§∂»
-            int pos = 6;//…Ë÷√≥ı ºŒª÷√
-            int frameCount = 0;//≥ı º÷° ˝
+            long length = file.length();//ÔøΩƒºÔøΩÔøΩƒ≥ÔøΩÔøΩÔøΩ
+            int pos = 6;//ÔøΩÔøΩÔøΩ√≥ÔøΩ ºŒªÔøΩÔøΩ
+            int frameCount = 0;//ÔøΩÔøΩ º÷°ÔøΩÔøΩ
             int packedPos = -1;
             /////////////////////////////////////////////////////
-            byte[] datas = new byte[1];//≥ı º ˝æ›÷µ
+            byte[] datas = new byte[1];//ÔøΩÔøΩ ºÔøΩÔøΩÔøΩ÷µ
             while (pos <= length) {
                 randomAccessFile.seek(pos);
                 if (randomAccessFile.read(datas, 0, 1) != 1) {
@@ -255,7 +294,7 @@ public class RecordingListActivity extends ActionBarActivity {
                 frameCount++;
             }
             /////////////////////////////////////////////////////
-            duration += frameCount * 20;//÷° ˝*20
+            duration += frameCount * 20;//÷°ÔøΩÔøΩ*20
         } finally {
             if (randomAccessFile != null) {
                 randomAccessFile.close();

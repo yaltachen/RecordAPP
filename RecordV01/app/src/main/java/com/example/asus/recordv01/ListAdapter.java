@@ -18,24 +18,24 @@ import java.util.Map;
  */
 public class ListAdapter extends BaseAdapter{
 
-    // �����ݵ�List
+
     private List<Map<String, Object>> list = new ArrayList<Map<String,Object>>();
-    // ��������CheckBox��ѡ��״��
+
     private static HashMap<Integer,Boolean> isSelected;
-    // ������
+
     private Context context;
-    // �������벼��
+
     private LayoutInflater inflater = null;
     private boolean isMulChoic = false;
 
 
-    // ������
+
     public ListAdapter(List<Map<String, Object>> list, Context context){
         this.context = context;
         this.list = list;
         inflater = LayoutInflater.from(context);
         isSelected = new HashMap<Integer, Boolean>();
-        // ��ʼ�����?
+
         initDate();
     }
 
@@ -70,18 +70,18 @@ public class ListAdapter extends BaseAdapter{
         ViewHolder holder = null;
         if(convertView == null)
         {
-            // ��ȡViewHolder����
+
             holder = new ViewHolder();
-            //���벼�ֲ���ֵ��convertview
+
             convertView = inflater.inflate(R.layout.item,null);
             holder.tv = (TextView)convertView.findViewById(R.id.item_tv);
             holder.cb = (CheckBox)convertView.findViewById(R.id.item_cb);
             holder.TVRecordingTime=(TextView)convertView.findViewById(R.id.item_tvTime);
-            // Ϊview���ñ�ǩ
+
             convertView.setTag(holder);
         }
         else{
-            // ȡ��holder
+
             holder = (ViewHolder) convertView.getTag();
         }
 

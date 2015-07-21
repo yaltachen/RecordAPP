@@ -3,6 +3,8 @@ package com.example.asus.recordv01;
 import android.app.ActionBar;
 import android.content.ClipData;
 import android.content.Intent;
+import android.media.AudioFormat;
+import android.media.AudioRecord;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.net.Uri;
@@ -20,6 +22,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.io.File;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -38,6 +41,9 @@ public class MainActivity extends ActionBarActivity implements  Runnable{
 
     private MediaRecorder mediaRecorder;
     private MediaPlayer mediaPlayer;
+
+
+
     private ArrayList<String> tempFileList;
     private Chronometer timer;
     private String tempUnitedFilePath;
@@ -45,16 +51,28 @@ public class MainActivity extends ActionBarActivity implements  Runnable{
     private boolean isBeginRecording = false;           // flag have started recording = true
     private boolean isRecordingPause = true;            // flag recording = false
     private boolean isBeginPlaying = false;             // flag have started playing = true
-    private boolean isPlayingPause = true;            // flag playing = false
 
+    private String format;
+    private String maxTime;
 
+    private SettingUtil setting;
+
+    private WAVRecordUtil wavRecordUtil;
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        setting = new SettingUtil(this);
+        maxTime = setting.getMaxHour();
+        format = setting.getRecordFormat();
+        System.out.println("format: " + format);
+        System.out.print("time: " + maxTime );
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-
         IVPlayRecording = (ImageView) findViewById(R.id.IVPlayRecording);
         IVStartRecording = (ImageView) findViewById(R.id.IVStartRecording);
         IVStopRecording = (ImageView) findViewById(R.id.IVStopRecording);
@@ -64,6 +82,8 @@ public class MainActivity extends ActionBarActivity implements  Runnable{
         // initialize
         timer = (Chronometer)this.findViewById(R.id.chronometer);
         this.registerForContextMenu(timer);
+        wavRecordUtil = new WAVRecordUtil(getApplicationContext(),true,0);
+
 
         // get date
         handler = new Handler() {
@@ -77,7 +97,6 @@ public class MainActivity extends ActionBarActivity implements  Runnable{
         IVStartRecording.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 if (!isBeginRecording) {
                     isBeginRecording = true;
                     tempFileList = new ArrayList<String>();         // initialize the temp file list
@@ -86,32 +105,54 @@ public class MainActivity extends ActionBarActivity implements  Runnable{
                 // click button when in pause state
                 if (isRecordingPause == true) {
                     mediaRecorder = new MediaRecorder();                        // initialize the mediaRecorder
-                    IVStartRecording.setImageDrawable(getResources().getDrawable(R.drawable.recordpause));
-
                     isRecordingPause = false;
-                    String fileDir = Environment.getExternalStorageDirectory().getAbsolutePath() + "/temp";     // the fileDir path
-                    File file = new File(fileDir);
-                    if (!file.exists())      // check the fileDir is exist
-                    {
-                        file.mkdir();       // not exist create it
+                    IVStartRecording.setImageDrawable(getResources().getDrawable(R.drawable.recordpause));
+                    // AMR
+                    if(format.equals("1")) {
+                        String fileDir = Environment.getExternalStorageDirectory().getAbsolutePath() + "/temp";     // the fileDir path
+                        File file = new File(fileDir);
+                        if (!file.exists())      // check the fileDir is exist
+                        {
+                            file.mkdir();       // not exist create it
+                        }
+                        String filePath = fileDir + "/" + createTempFileName() + ".amr";
+                        AMRRecordUtil.startRecording(mediaRecorder, filePath);       // start recording
+                        tempFileList.add(filePath);
                     }
-
-                    String filePath = fileDir + "/" + createTempFileName() + ".amr";
+                    // WAV
+                    else{
+                        try {
+                            wavRecordUtil.startRecord();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
                     timer.setBase(SystemClock.elapsedRealtime() - convert(timer.getText().toString()));
-                    //timer.setBase(recordingTime);
                     timer.start();                                               //  begin timing
-                    AMRRecordUtil.startRecording(mediaRecorder, filePath);       // start recording
-                    tempFileList.add(filePath);
                     TVTextView.setText("recording now...");
                 }
+
+
                 // click button when in recording state
                 else {
                     isRecordingPause = true;
                     IVStartRecording.setImageDrawable(getResources().getDrawable(R.drawable.record1));
-                    AMRRecordUtil.pauseRecording(mediaRecorder);
+
+                    // AMR
+                    if(format.equals("1")){
+                        AMRRecordUtil.pauseRecording(mediaRecorder);
+                    }
+
+                    // WAV
+                    else {
+                        try {
+                            wavRecordUtil.Pause();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
                     TVTextView.setText("recording pause...");
                     timer.stop();
-
                 }
             }
         });
@@ -119,32 +160,49 @@ public class MainActivity extends ActionBarActivity implements  Runnable{
         IVStopRecording.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(!isBeginRecording)
-                {
+                if (!isBeginRecording) {
                     return;
                 }
-                if(!isRecordingPause)
-                {
-                    AMRRecordUtil.stopRecording(mediaRecorder);
-                    mediaRecorder = null;
+                if (!isRecordingPause) {
+                    // AMR
+                    if(format.equals("1")) {
+                        AMRRecordUtil.stopRecording(mediaRecorder);
+                        mediaRecorder = null;
+                    }
+                    // WAV
+                    else{
+                        try {
+                            wavRecordUtil.Pause();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
                 }
 
-                String fileDir = Environment.getExternalStorageDirectory().getAbsolutePath() + "/Recordings";
-                File file = new File(fileDir);
-                if(!file.exists())
-                {
-                    file.mkdir();
+                // AMR
+                if (format.equals("1")) {
+                    String fileDir = Environment.getExternalStorageDirectory().getAbsolutePath() + "/Recordings";
+                    File file = new File(fileDir);
+                    if (!file.exists()) {
+                        file.mkdir();
+                    }
+
+                    String filePath = fileDir + "/" + createTempFileName() + ".amr";
+                    tempUnitedFilePath = filePath;
+                    AMRRecordUtil.saveRecording(tempFileList, filePath);
+                }
+                // WAV
+                else if (format.equals("2")) {
+                    wavRecordUtil.save();
                 }
 
-                String filePath = fileDir + "/" + createTempFileName() + ".amr";
-                tempUnitedFilePath = filePath;
-                AMRRecordUtil.saveRecording(tempFileList,filePath);
                 isBeginRecording = false;
                 isRecordingPause = true;
                 IVStartRecording.setImageDrawable(getResources().getDrawable(R.drawable.record1));
                 timer.setBase(SystemClock.elapsedRealtime());
                 timer.stop();
                 TVTextView.setText("recording finish...");
+
             }
         });
 
@@ -155,6 +213,7 @@ public class MainActivity extends ActionBarActivity implements  Runnable{
                     AMRPlayUtil.stopPlaying(mediaPlayer);
                     mediaPlayer = null;
                     mediaPlayer = new MediaPlayer();
+
                     AMRPlayUtil.startPlaying(mediaPlayer, tempUnitedFilePath);
                 }
                 if(!isBeginPlaying)
