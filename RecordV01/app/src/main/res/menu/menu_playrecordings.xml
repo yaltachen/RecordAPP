@@ -4,7 +4,12 @@
     tools:context="com.example.asus.myapplication.PlayingActivity">
     <item
         android:id="@+id/action_delete"
-        android:icon="@drawable/bin"
+        android:icon="@drawable/bin_white"
         app:showAsAction = "always"
         android:title="@string/action_delete"/>
+    <item
+        android:id="@+id/action_detail"
+        android:icon="@drawable/information"
+        app:showAsAction = "always"
+        android:title="Detail"/>
 </menu>

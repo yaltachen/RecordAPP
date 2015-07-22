@@ -69,7 +69,8 @@ public class WAVRecordUtil extends RecordUtil implements Runnable {
         recordTempFolderPath = Environment.getExternalStorageDirectory() + "/temp";
         this.context = context;
 
-        NewAudioName = getAvailableFileName();        AudioName = getAvailableTempFileName();
+        NewAudioName = getAvailableFileName();
+        AudioName = getAvailableTempFileName();
 
         if(maxRecordLen > 0)
             this.maxRecordLen = maxRecordLen;

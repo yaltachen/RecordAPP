@@ -55,7 +55,7 @@ public class RecordingListActivity extends ActionBarActivity {
         setContentView(R.layout.activity_recordinglist);
         context = this;
         getView();
-        initDate();
+        initData();
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         myAdapter = new ListAdapter(mData,this);
         lv.setAdapter(myAdapter);
@@ -82,17 +82,28 @@ public class RecordingListActivity extends ActionBarActivity {
                         .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
+                                List<File> deleteList = new ArrayList<File>();
                                 for (int i = 0; i < myAdapter.getCount(); i++) {
                                     if (myAdapter.getIsSelected().get(i)) {
                                         Object filePath = ((Map<String, Object>) myAdapter.getItem(i)).get("fileName");
                                         File file = new File(Environment.getExternalStorageDirectory() + "/Recordings/" + String.valueOf(filePath));
-                                        if (file.exists()) {
-                                            file.delete();
-                                        }
-                                        mData.remove(i);
+                                        deleteList.add(file);
                                         myAdapter.getIsSelected().put(i, false);
                                     }
                                 }
+                                for(int i = 0; i < deleteList.size(); i++)
+                                {
+                                    File tempfile = deleteList.get(i);
+                                    if(tempfile.exists())
+                                    {
+                                        tempfile.delete();
+                                    }
+                                }
+                                initData();
+                                myAdapter = new ListAdapter(mData,context);
+                                lv.setAdapter(myAdapter);
+                                myAdapter.notifyDataSetChanged();
+                                isMulChoic = false;
                                 dataChanged();
                             }
                         })
@@ -105,20 +116,24 @@ public class RecordingListActivity extends ActionBarActivity {
         btnShare.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent share = new Intent(Intent.ACTION_SEND);
-                share.putExtra(share.EXTRA_STREAM, Uri.fromFile(new File(
-                        Environment.getExternalStorageDirectory()
-                                + "/Recordings/" + "张靓颖 - All Of Me.mp3"
-                )));
-                share.setType("audio/*");
-                share.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(Intent.createChooser(share,"Share Voice Memo"));
-//                Intent intent = new Intent(Intent.ACTION_SEND);
-//                intent.setType("text/plain");
-//                intent.putExtra(Intent.EXTRA_SUBJECT,"分享");
-//                intent.putExtra(Intent.EXTRA_TEXT,"text");
-//
-//                startActivity(Intent.createChooser(intent, getTitle()));
+                ArrayList<Uri> uriList = new ArrayList<Uri>();
+                for (int i = 0; i < myAdapter.getCount(); i++) {
+                    if (myAdapter.getIsSelected().get(i)) {
+                        Object filePath = ((Map<String, Object>) myAdapter.getItem(i)).get("fileName");
+                        File file = new File(Environment.getExternalStorageDirectory() + "/Recordings/" + String.valueOf(filePath));
+                        uriList.add(Uri.fromFile(file));
+                    }
+                }
+                boolean multiple = uriList.size() > 1;
+                Intent intent = new Intent(multiple ? android.content.Intent.ACTION_SEND_MULTIPLE
+                        : android.content.Intent.ACTION_SEND);
+                intent.setType("*/*");
+                if(multiple){
+                    intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uriList);
+                }else{
+                    intent.putExtra(Intent.EXTRA_STREAM, uriList.get(0));
+                }
+                startActivity(Intent.createChooser(intent, "Share"));
             }
         });
 
@@ -168,8 +183,16 @@ public class RecordingListActivity extends ActionBarActivity {
     {
         switch (resultCode){
             case RESULT_OK:
-                dataChanged();
+                initData();
+                myAdapter = new ListAdapter(mData,context);
+                lv.setAdapter(myAdapter);
+                myAdapter.notifyDataSetChanged();
                 break;
+            case 2:
+                initData();
+                myAdapter = new ListAdapter(mData,context);
+                lv.setAdapter(myAdapter);
+                myAdapter.notifyDataSetChanged();
             default:
                 break;
         }
@@ -188,14 +211,19 @@ public class RecordingListActivity extends ActionBarActivity {
 
             @Override
             public boolean onQueryTextSubmit(String arg0) {
-                return true;
+                initData(arg0);
+                myAdapter = new ListAdapter(mData, context);
+                lv.setAdapter(myAdapter);
+                myAdapter.notifyDataSetChanged();
+                return false;
             }
 
             @Override
             public boolean onQueryTextChange(String arg0) {
-//                if (actionOperationListener != null) {
-//                    actionOperationListener.onSearchFile(arg0)
-//              }
+                initData(arg0);
+                myAdapter = new ListAdapter(mData, context);
+                lv.setAdapter(myAdapter);
+                myAdapter.notifyDataSetChanged();
                 return false;
             }
         });
@@ -230,11 +258,22 @@ public class RecordingListActivity extends ActionBarActivity {
         lv = (ListView) findViewById(R.id.listView);
     }
 
-    // 初始化数�?
-    private void initDate(){
+    // init the data
+    private void initData() {
+        initData("");
+    }
+
+    private void initData(String keyWord){
         File fileDir = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Recordings");
         File[] fileList = fileDir.listFiles();
 
+        if(mData!=null)
+        {
+            mData.clear();
+        }
+        else {
+            mData = new ArrayList<Map<String,Object>>();
+        }
         for(int i = 0; i < fileList.length; i++)
         {
             Map<String,Object> map = new HashMap<String,Object>();
@@ -245,12 +284,10 @@ public class RecordingListActivity extends ActionBarActivity {
             mmr.setDataSource(fileList[i].getAbsolutePath());
 
             map.put("recordingTime",mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION));
-
-            mData.add(map);
+            if(fileList[i].getName().contains(keyWord)||keyWord.equals(""))
+                mData.add(map);
         }
-
     }
-
     // 数据改变
     private void dataChanged(){
         if(isMulChoic == false)
