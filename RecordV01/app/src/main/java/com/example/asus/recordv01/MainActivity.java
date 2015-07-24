@@ -1,26 +1,23 @@
 package com.example.asus.recordv01;
 
 import android.app.ActionBar;
-import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.content.ClipData;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
-import android.media.AudioFormat;
-import android.media.AudioRecord;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
-import android.net.Uri;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.SystemClock;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.support.v7.widget.SearchView;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -39,11 +36,10 @@ import java.util.Date;
 
 public class MainActivity extends ActionBarActivity implements  Runnable{
     ActionBar actionBar;
-    private ImageView IVPlayRecording;
+    //private ImageView IVPlayRecording;
     private ImageView IVStartRecording;
     private ImageView IVStopRecording;
     private TextView TVTextView;
-    private ActionBar ABRecordingList;
 
     private Handler handler;
     private TextView TVDate;
@@ -51,7 +47,7 @@ public class MainActivity extends ActionBarActivity implements  Runnable{
     private MediaRecorder mediaRecorder;
     private MediaPlayer mediaPlayer;
 
-
+    private static String wavPath;
 
     private ArrayList<String> tempFileList;
     private Chronometer timer;
@@ -84,11 +80,13 @@ public class MainActivity extends ActionBarActivity implements  Runnable{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         clearNotification();
-        IVPlayRecording = (ImageView) findViewById(R.id.IVPlayRecording);
+        //IVPlayRecording = (ImageView) findViewById(R.id.IVPlayRecording);
         IVStartRecording = (ImageView) findViewById(R.id.IVStartRecording);
         IVStopRecording = (ImageView) findViewById(R.id.IVStopRecording);
         TVTextView = (TextView) findViewById(R.id.textView);
         TVDate = (TextView)findViewById(R.id.textDate);
+        //IVPlayRecording.setVisibility(View.INVISIBLE);
+        IVStopRecording.setVisibility(View.INVISIBLE);
 
         // initialize
         timer = (Chronometer)this.findViewById(R.id.chronometer);
@@ -109,9 +107,12 @@ public class MainActivity extends ActionBarActivity implements  Runnable{
             @Override
             public void onClick(View v) {
                 if (!isBeginRecording) {
-                    isBeginRecording = true;
+
+
                     tempFileList = new ArrayList<String>();         // initialize the temp file list
                     timer.setBase(SystemClock.elapsedRealtime());                //  clear the timer set time to 00:00
+                    IVStopRecording.setVisibility(View.VISIBLE);
+                    //IVPlayRecording.setVisibility(View.INVISIBLE);
                 }
                 // click button when in pause state
                 if (isRecordingPause == true) {
@@ -132,15 +133,29 @@ public class MainActivity extends ActionBarActivity implements  Runnable{
                     }
                     // WAV
                     else {
-                        try {
-                            wavRecordUtil.startRecord();
-                        } catch (IOException e) {
-                            e.printStackTrace();
+                        if(!isBeginRecording) {
+                            try {
+                                wavRecordUtil.startRecord();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                        else
+                        {
+                            try {
+                                wavRecordUtil.Pause();
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
                         }
                     }
                     timer.setBase(SystemClock.elapsedRealtime() - convert(timer.getText().toString()));
                     timer.start();                                               //  begin timing
-                    TVTextView.setText("recording now...");
+                    TVTextView.setText("Recording now...");
+                    if(!isBeginRecording)
+                    {
+                        isBeginRecording=true;
+                    }
                 }
 
 
@@ -162,9 +177,10 @@ public class MainActivity extends ActionBarActivity implements  Runnable{
                             e.printStackTrace();
                         }
                     }
-                    TVTextView.setText("recording pause...");
+                    TVTextView.setText("Recording paused...");
                     timer.stop();
                 }
+                invalidateOptionsMenu();
             }
         });
 
@@ -176,12 +192,12 @@ public class MainActivity extends ActionBarActivity implements  Runnable{
                 }
                 if (!isRecordingPause) {
                     // AMR
-                    if(format.equals("1")) {
+                    if (format.equals("1")) {
                         AMRRecordUtil.stopRecording(mediaRecorder);
                         mediaRecorder = null;
                     }
                     // WAV
-                    else{
+                    else {
                         try {
                             wavRecordUtil.Pause();
                         } catch (IOException e) {
@@ -203,6 +219,7 @@ public class MainActivity extends ActionBarActivity implements  Runnable{
 
                     final EditText editText = new EditText(context);
                     new android.support.v7.app.AlertDialog.Builder(context)
+                            .setCancelable(false)
                             .setTitle("Name")
                             .setView(editText)
                             .setPositiveButton("Save", new DialogInterface.OnClickListener() {
@@ -210,53 +227,81 @@ public class MainActivity extends ActionBarActivity implements  Runnable{
                                 public void onClick(DialogInterface dialog, int which) {
                                     String fileName = editText.getText().toString();
                                     File file = new File(Environment.getExternalStorageDirectory() + "/Recordings/" + fileName + ".amr");
-                                    while(file.exists())
-                                    {
+                                    while (file.exists()) {
                                         fileName = fileName + "<" + createTempFileName() + ">";
                                         file = new File(Environment.getExternalStorageDirectory() + "/Recordings/" + fileName + ".amr");
                                     }
                                     AMRRecordUtil.saveRecording(tempFileList,
                                             Environment.getExternalStorageDirectory() + "/Recordings/" + fileName + ".amr");
-                                    Toast.makeText(context, "saved successfully", Toast.LENGTH_SHORT).show();
-
+                                    Toast.makeText(context, "Saved successfully", Toast.LENGTH_SHORT).show();
+                                    IVStopRecording.setVisibility(View.INVISIBLE);
                                 }
                             })
-                            .setNegativeButton("Give Up", null)
+                            .setNegativeButton("Cancel", null)
                             .show();
+
+                    IVStopRecording.setVisibility(View.INVISIBLE);
+                    //IVPlayRecording.setVisibility(View.VISIBLE);
+                    invalidateOptionsMenu();
                 }
                 // WAV
                 else if (format.equals("2")) {
+                    final String wavFileName = wavPath;
                     wavRecordUtil.save();
-                }
 
+                    final EditText editText = new EditText(context);
+                    new android.support.v7.app.AlertDialog.Builder(context)
+                            .setCancelable(false)
+                            .setTitle("Name")
+                            .setView(editText)
+                            .setPositiveButton("Save", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    File file = new File(wavFileName);
+                                    System.out.println("wav:" + file.getAbsolutePath());
+                                    String fileName = String.valueOf(editText.getText());
+                                    file.renameTo(new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Recordings/" + fileName + ".wav"));
+                                    if(file.exists())
+                                    {
+                                        fileName = fileName + "<" + createTempFileName() + ">";
+                                        file = new File(Environment.getExternalStorageDirectory() + "/Recordings/" + fileName + "<" + createTempFileName() + ">" + ".wav");
+                                    }
+                                    Toast.makeText(context, "Saved successfully", Toast.LENGTH_SHORT).show();
+                                    IVStopRecording.setVisibility(View.INVISIBLE);
+                                }
+                            })
+                            .setNegativeButton("Cancel", null)
+                            .show();
+
+                }
                 isBeginRecording = false;
                 isRecordingPause = true;
                 IVStartRecording.setImageDrawable(getResources().getDrawable(R.drawable.record1));
                 timer.setBase(SystemClock.elapsedRealtime());
                 timer.stop();
-                TVTextView.setText("recording finish...");
-
+                TVTextView.setText("Recording finished...");
+                invalidateOptionsMenu();
             }
         });
 
-        IVPlayRecording.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(isBeginPlaying) {
-                    AMRPlayUtil.stopPlaying(mediaPlayer);
-                    mediaPlayer = null;
-                    mediaPlayer = new MediaPlayer();
-
-                    AMRPlayUtil.startPlaying(mediaPlayer, tempUnitedFilePath);
-                }
-                if(!isBeginPlaying)
-                {
-                    isBeginPlaying = true;
-                    mediaPlayer = new MediaPlayer();
-                    AMRPlayUtil.startPlaying(mediaPlayer, tempUnitedFilePath);
-                }
-            }
-        });
+//        IVPlayRecording.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//                if(isBeginPlaying) {
+//                    AMRPlayUtil.stopPlaying(mediaPlayer);
+//                    mediaPlayer = null;
+//                    mediaPlayer = new MediaPlayer();
+//
+//                    AMRPlayUtil.startPlaying(mediaPlayer, tempUnitedFilePath);
+//                }
+//                if(!isBeginPlaying)
+//                {
+//                    isBeginPlaying = true;
+//                    mediaPlayer = new MediaPlayer();
+//                    AMRPlayUtil.startPlaying(mediaPlayer, tempUnitedFilePath);
+//                }
+//            }
+//        });
     }
 
     @Override
@@ -275,6 +320,17 @@ public class MainActivity extends ActionBarActivity implements  Runnable{
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        menu.clear();
+        if(isBeginRecording)
+            getMenuInflater().inflate(R.menu.menu_main_playing, menu);
+        else
+            getMenuInflater().inflate(R.menu.menu_main, menu);
+
         return true;
     }
 
@@ -301,11 +357,16 @@ public class MainActivity extends ActionBarActivity implements  Runnable{
         return super.onOptionsItemSelected(item);
     }
 
-    public String createTempFileName()
+    public static String createTempFileName()
     {
         SimpleDateFormat sdf = new SimpleDateFormat("hh-mm-ss-mmm");
         String time = sdf.format(new java.util.Date());
         return  time;
+    }
+
+    public static void setWavPath(String name)
+    {
+        wavPath = name;
     }
 
     // a thread to get date
@@ -340,44 +401,45 @@ public class MainActivity extends ActionBarActivity implements  Runnable{
     }
 
     private void showNotification(){
-        // ´´½¨Ò»¸öNotificationManagerµÄÒýÓÃ
+        // ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½NotificationManagerï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         NotificationManager notificationManager = (NotificationManager)
                 this.getSystemService(android.content.Context.NOTIFICATION_SERVICE);
 
-        // ¶¨ÒåNotificationµÄ¸÷ÖÖÊôÐÔ
+        // ï¿½ï¿½ï¿½ï¿½Notificationï¿½Ä¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         Notification notification =new Notification(R.drawable.icon,
                 "Recorder", System.currentTimeMillis());
-        //FLAG_AUTO_CANCEL   ¸ÃÍ¨ÖªÄÜ±»×´Ì¬À¸µÄÇå³ý°´Å¥¸øÇå³ýµô
-        //FLAG_NO_CLEAR      ¸ÃÍ¨Öª²»ÄÜ±»×´Ì¬À¸µÄÇå³ý°´Å¥¸øÇå³ýµô
-        //FLAG_ONGOING_EVENT Í¨Öª·ÅÖÃÔÚÕýÔÚÔËÐÐ
-        //FLAG_INSISTENT     ÊÇ·ñÒ»Ö±½øÐÐ£¬±ÈÈçÒôÀÖÒ»Ö±²¥·Å£¬ÖªµÀÓÃ»§ÏìÓ¦
-        notification.flags |= Notification.FLAG_ONGOING_EVENT; // ½«´ËÍ¨Öª·Åµ½Í¨ÖªÀ¸µÄ"Ongoing"¼´"ÕýÔÚÔËÐÐ"×éÖÐ
-        notification.flags |= Notification.FLAG_NO_CLEAR; // ±íÃ÷ÔÚµã»÷ÁËÍ¨ÖªÀ¸ÖÐµÄ"Çå³ýÍ¨Öª"ºó£¬´ËÍ¨Öª²»Çå³ý£¬¾­³£ÓëFLAG_ONGOING_EVENTÒ»ÆðÊ¹ÓÃ
+        //FLAG_AUTO_CANCEL   ï¿½ï¿½Í¨Öªï¿½Ü±ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        //FLAG_NO_CLEAR      ï¿½ï¿½Í¨Öªï¿½ï¿½ï¿½Ü±ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        //FLAG_ONGOING_EVENT Í¨Öªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        //FLAG_INSISTENT     ï¿½Ç·ï¿½Ò»Ö±ï¿½ï¿½ï¿½Ð£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»Ö±ï¿½ï¿½ï¿½Å£ï¿½Öªï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½Ó¦
+        notification.flags |= Notification.FLAG_ONGOING_EVENT; // ï¿½ï¿½ï¿½ï¿½Í¨Öªï¿½Åµï¿½Í¨Öªï¿½ï¿½ï¿½ï¿½"Ongoing"ï¿½ï¿½"ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½"ï¿½ï¿½ï¿½ï¿½
+         // ï¿½ï¿½ï¿½ï¿½ï¿½Úµï¿½ï¿½ï¿½ï¿½Í¨Öªï¿½ï¿½ï¿½Ðµï¿½"ï¿½ï¿½ï¿½Í¨Öª"ï¿½ó£¬´ï¿½Í¨Öªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½FLAG_ONGOING_EVENTÒ»ï¿½ï¿½Ê¹ï¿½ï¿½
         notification.flags |= Notification.FLAG_SHOW_LIGHTS;
-        //DEFAULT_ALL     Ê¹ÓÃËùÓÐÄ¬ÈÏÖµ£¬±ÈÈçÉùÒô£¬Õð¶¯£¬ÉÁÆÁµÈµÈ
-        //DEFAULT_LIGHTS  Ê¹ÓÃÄ¬ÈÏÉÁ¹âÌáÊ¾
-        //DEFAULT_SOUNDS  Ê¹ÓÃÄ¬ÈÏÌáÊ¾ÉùÒô
-        //DEFAULT_VIBRATE Ê¹ÓÃÄ¬ÈÏÊÖ»úÕð¶¯£¬Ðè¼ÓÉÏ<uses-permission android:name="android.permission.VIBRATE" />È¨ÏÞ
+        notification.flags |= Notification.FLAG_AUTO_CANCEL;   //ï¿½ï¿½Í¨Öªï¿½Ü±ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        //DEFAULT_ALL     Ê¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¬ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ð¶¯£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Èµï¿½
+        //DEFAULT_LIGHTS  Ê¹ï¿½ï¿½Ä¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾
+        //DEFAULT_SOUNDS  Ê¹ï¿½ï¿½Ä¬ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½
+        //DEFAULT_VIBRATE Ê¹ï¿½ï¿½Ä¬ï¿½ï¿½ï¿½Ö»ï¿½ï¿½ð¶¯£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½<uses-permission android:name="android.permission.VIBRATE" />È¨ï¿½ï¿½
         notification.defaults = Notification.DEFAULT_LIGHTS;
-        //µþ¼ÓÐ§¹û³£Á¿
+        //ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½ï¿½ï¿½
         //notification.defaults=Notification.DEFAULT_LIGHTS|Notification.DEFAULT_SOUND;
         notification.ledARGB = Color.BLUE;
-        notification.ledOnMS =5000; //ÉÁ¹âÊ±¼ä£¬ºÁÃë
+        notification.ledOnMS =5000; //ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ä£¬ï¿½ï¿½ï¿½ï¿½
 
-        // ÉèÖÃÍ¨ÖªµÄÊÂ¼þÏûÏ¢
-        CharSequence contentTitle ="Recorder"; // Í¨ÖªÀ¸±êÌâ
-        CharSequence contentText ="Recorder01"; // Í¨ÖªÀ¸ÄÚÈÝ
-        Intent notificationIntent =new Intent(MainActivity.this, MainActivity.class); // µã»÷¸ÃÍ¨ÖªºóÒªÌø×ªµÄActivity
+        // ï¿½ï¿½ï¿½ï¿½Í¨Öªï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½Ï¢
+        CharSequence contentTitle ="Recorder"; // Í¨Öªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        CharSequence contentText ="Recorder01"; // Í¨Öªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        Intent notificationIntent =new Intent(MainActivity.this, MainActivity.class); // ï¿½ï¿½ï¿½ï¿½ï¿½Í¨Öªï¿½ï¿½Òªï¿½ï¿½×ªï¿½ï¿½Activity
         PendingIntent contentItent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
         notification.setLatestEventInfo(this, contentTitle, contentText, contentItent);
 
-        // °ÑNotification´«µÝ¸øNotificationManager
+        // ï¿½ï¿½Notificationï¿½ï¿½ï¿½Ý¸ï¿½NotificationManager
         notificationManager.notify(0, notification);
     }
 
-    //É¾³ýÍ¨Öª
+    //É¾ï¿½ï¿½Í¨Öª
     private void clearNotification(){
-        // Æô¶¯ºóÉ¾³ýÖ®Ç°ÎÒÃÇ¶¨ÒåµÄÍ¨Öª
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¾ï¿½ï¿½Ö®Ç°ï¿½ï¿½ï¿½Ç¶ï¿½ï¿½ï¿½ï¿½Í¨Öª
         NotificationManager notificationManager = (NotificationManager) this
                 .getSystemService(NOTIFICATION_SERVICE);
         notificationManager.cancel(0);

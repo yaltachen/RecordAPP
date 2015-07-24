@@ -74,6 +74,7 @@ public class ListAdapter extends BaseAdapter{
             holder = new ViewHolder();
 
             convertView = inflater.inflate(R.layout.item,null);
+            holder.TVRecordingDate = (TextView)convertView.findViewById(R.id.item_tvDate);
             holder.tv = (TextView)convertView.findViewById(R.id.item_tv);
             holder.cb = (CheckBox)convertView.findViewById(R.id.item_cb);
             holder.TVRecordingTime=(TextView)convertView.findViewById(R.id.item_tvTime);
@@ -88,6 +89,7 @@ public class ListAdapter extends BaseAdapter{
         holder.tv.setText((String)list.get(position).get("fileName"));
         holder.cb.setChecked(getIsSelected().get(position));
         holder.TVRecordingTime.setText((String)list.get(position).get("recordingTime"));
+        holder.TVRecordingDate.setText((String)list.get(position).get("recordingDate"));
 
         if(isMulChoic == false)
         {
@@ -105,6 +107,7 @@ public class ListAdapter extends BaseAdapter{
     {
         TextView tv;
         TextView TVRecordingTime;
+        TextView TVRecordingDate;
         CheckBox cb;
     }
 

@@ -8,14 +8,21 @@ import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceCategory;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
+import android.preference.PreferenceScreen;
 import android.preference.RingtonePreference;
 import android.text.TextUtils;
+import android.widget.Toast;
+
+import com.baidu.oauth.BaiduOAuth;
 
 import java.util.List;
 
@@ -29,13 +36,109 @@ public class SettingsActivity extends PreferenceActivity {
      */
     private static final boolean ALWAYS_SIMPLE_PREFS = false;
 
-
-
+    private final String mbApiKey = "clHB9RsjML7d1GhjZ4gGqMvr";// api key for baidu service
+    private Handler handler;
+    private Context context;
     @Override
     protected void onPostCreate(Bundle savedInstanceState) {
         super.onPostCreate(savedInstanceState);
-
+        context = this;
+        handler = new android.os.Handler(){
+            @Override
+            public void handleMessage(Message msg){
+                String s = String.valueOf(msg.obj);
+                Toast.makeText(context, s, Toast.LENGTH_SHORT).show();
+            }
+        };
         setupSimplePreferencesScreen();
+        PreferenceScreen backupPreference = (PreferenceScreen)getPreferenceScreen().findPreference("btn_backup");
+        backupPreference.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+            @Override
+            public boolean onPreferenceClick(Preference preference) {
+//                        Intent intent = new Intent(context,BackupActiviy.class);
+//                        startActivity(intent);
+                // show login to baidu service
+                BaiduOAuth oauthClient = new BaiduOAuth();
+
+                oauthClient.startOAuth(context, mbApiKey, new BaiduOAuth.OAuthListener() {
+                    @Override
+                    public void onException(String msg) {
+                        Toast.makeText(context, "Login failed " + msg, Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onComplete(BaiduOAuth.BaiduOAuthResponse response) {
+                        if (null != response) {
+                            String userName = response.getUserName();
+                            if (userName.contains("*****")) {
+                                Toast.makeText(context, "Phone number is not supported,please try another account", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                            CommonUploadUtils commonUploadUtils = new CommonUploadUtils(context, handler, userName);
+                            String path = Environment.getExternalStorageDirectory() + "/Recordings";
+                            commonUploadUtils.setUploadPath(path);
+                            if (commonUploadUtils.isDownloading() || commonUploadUtils.isUploading()) {
+                                Toast.makeText(context, "A Uploading or a Downloading is on processing,Please try later", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                            Toast.makeText(context, response.getUserName() + " Login success", Toast.LENGTH_SHORT).show();
+                            commonUploadUtils.runUpload();
+                        }
+                    }
+
+                    @Override
+                    public void onCancel() {
+                        Toast.makeText(context, "Login cancelled", Toast.LENGTH_SHORT).show();
+                    }
+                });
+                return false;
+            }
+        });
+
+        PreferenceScreen restorePreference = (PreferenceScreen)getPreferenceScreen().findPreference("btn_restore");
+        restorePreference.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+            @Override
+            public boolean onPreferenceClick(Preference preference) {
+//                        Intent intent = new Intent(context,BackupActiviy.class);
+//                        startActivity(intent);
+                // show login to baidu service
+                BaiduOAuth oauthClient = new BaiduOAuth();
+
+                oauthClient.startOAuth(context, mbApiKey, new BaiduOAuth.OAuthListener() {
+                    @Override
+                    public void onException(String msg) {
+                        Toast.makeText(context, "Login failed " + msg, Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onComplete(BaiduOAuth.BaiduOAuthResponse response) {
+                        if (null != response) {
+                            String userName = response.getUserName();
+                            if (userName.contains("*****")) {
+                                Toast.makeText(context, "Phone number is not supported,please try another account", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                            CommonUploadUtils commonUploadUtils = new CommonUploadUtils(context, handler, userName);
+                            String path = Environment.getExternalStorageDirectory() + "/Recordings";
+                            commonUploadUtils.setDownloadPath(path);
+                            if (commonUploadUtils.isDownloading() || commonUploadUtils.isUploading()) {
+                                Toast.makeText(context, "A Uploading or a Downloading is on processing,Please try later", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
+                            Toast.makeText(context, response.getUserName() + " Login success", Toast.LENGTH_SHORT).show();
+                            commonUploadUtils.runDownload();
+
+                        }
+                    }
+
+                    @Override
+                    public void onCancel() {
+                        Toast.makeText(context, "Login cancelled", Toast.LENGTH_SHORT).show();
+                    }
+                });
+                return false;
+            }
+        });
     }
 
     /**

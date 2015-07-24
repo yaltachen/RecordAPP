@@ -4,6 +4,7 @@
     tools:context="com.example.asus.myapplication.RecordinglistActivity">
     <item
         android:id="@+id/action_search"
+        android:icon="@drawable/search"
         app:actionViewClass="android.support.v7.widget.SearchView"
         app:showAsAction="ifRoom|collapseActionView"
         android:title="@string/action_search" />

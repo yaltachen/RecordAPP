@@ -51,7 +51,8 @@ public class WAVRecordUtil extends RecordUtil implements Runnable {
     private String AudioName = "";
     //NewAudioName for wav file
     private String NewAudioName = "";
-
+    private String newAudiPath = "";
+    public String audioName ="";
     private Thread threadTimeCounting;     // the thread to count the record time
     private String recordFolderPath;       // record folder path
     private String recordTempFolderPath;  // temp record folder path
@@ -70,7 +71,9 @@ public class WAVRecordUtil extends RecordUtil implements Runnable {
         this.context = context;
 
         NewAudioName = getAvailableFileName();
+        MainActivity.setWavPath(NewAudioName);
         AudioName = getAvailableTempFileName();
+        audioName = NewAudioName;
 
         if(maxRecordLen > 0)
             this.maxRecordLen = maxRecordLen;
@@ -142,11 +145,17 @@ public class WAVRecordUtil extends RecordUtil implements Runnable {
             curRecordLen = 0;
             // delete temp file
             File file = new File(AudioName);
+            //newAudiPath = file.getAbsolutePath();
             if(file.isFile())
             {
                 file.delete();
             }
         }
+    }
+
+    public String getPath()
+    {
+        return newAudiPath;
     }
 
     @Override
@@ -196,6 +205,11 @@ public class WAVRecordUtil extends RecordUtil implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public String getName()
+    {
+        return audioName;
     }
 
     // change pcm stream to wav

@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
+import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Environment;
@@ -11,15 +12,21 @@ import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.SearchView;
+import android.text.InputFilter;
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.ant.liao.GifView;
 
@@ -79,6 +86,7 @@ public class PlayingActivity extends ActionBarActivity {
         {
             Intent intent = new Intent(PlayingActivity.this,
                     RecordingListActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
             // 2-->maybe reName file need to update the list
             setResult(2,intent);
             finish();
@@ -87,7 +95,9 @@ public class PlayingActivity extends ActionBarActivity {
 
         if(id == R.id.action_delete)
         {
-            new AlertDialog.Builder(context).setTitle("Confirm")
+            new AlertDialog.Builder(context)
+                    .setCancelable(false)
+                    .setTitle("Confirm")
                     .setMessage("Do you really want to delete these recordings")
                     .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                         @Override
@@ -115,11 +125,15 @@ public class PlayingActivity extends ActionBarActivity {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss");
-            new AlertDialog.Builder(context).setTitle("Detail")
+            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+            MediaMetadataRetriever mmr = new MediaMetadataRetriever();
+            mmr.setDataSource(file.getAbsolutePath());
+
+            new AlertDialog.Builder(context)
+                    .setTitle("Detail")
                     .setMessage("Size:" + FormatFileSize(file.length()) +
                             "\r\n\r\nDate:" + sdf.format(new Date(file.lastModified())) +
-                            "\r\n\r\nTime:" + getHMSTime(mediaPlayer.getDuration()) +
+                            "\r\n\r\nTime:" + getHMSTime(Integer.parseInt(mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION))) +
                             "\r\n\r\nLoaction:" + file.getAbsolutePath())
                     .show();
         }
@@ -134,26 +148,29 @@ public class PlayingActivity extends ActionBarActivity {
         return true;
     }
 
-//    @Override
-//    public void onDestroy(){
-//        super.onDestroy();
-//        play_pause = null;
-//        stop = null;
-//        edit = null;
-//        txtFileName = null;
-//        recordTime = null;
-//        playing.destroyDrawingCache();
-//        playing = null;
-//        seekbar = null;
-//        mTimer = null;
-//        mTimeTask = null;
-//        player = null;
-//        fileName = null;
-//        isFirst = false;        // 是否是第一次点击
-//        isPlay = false;         // 是否播放
-//        isChanging = false;    // 互斥变量，防止定时器与SeekBar拖动时进度冲突
-//        context = null;
-//    }
+    @Override
+    public void onDestroy(){
+        super.onDestroy();
+        if(mTimer!=null)
+            mTimer.cancel();
+        play_pause = null;
+        stop = null;
+        edit = null;
+        txtFileName = null;
+        recordTime = null;
+        playing.destroyDrawingCache();
+        playing = null;
+        seekbar = null;
+        mTimer = null;
+        mTimeTask = null;
+        player = null;
+        fileName = null;
+        isFirst = false;        // 是否是第一次点击
+        isPlay = false;         // 是否播放
+        isChanging = false;    // 互斥变量，防止定时器与SeekBar拖动时进度冲突
+        context = null;
+        System.gc();
+    }
 
     private void findView()
     {
@@ -223,7 +240,7 @@ public class PlayingActivity extends ActionBarActivity {
                             seekbar.setProgress(player.getCurrentPosition());
                         }
                     };
-                    mTimer.schedule(mTimeTask, 0, 10);
+                    mTimer.schedule(mTimeTask, 0, 100);
                     player.start();
                 }
                 // 播放状态按下pause_play
@@ -242,14 +259,13 @@ public class PlayingActivity extends ActionBarActivity {
         stop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(!isFirst) {
+                if (!isFirst) {
                     play_pause.setImageDrawable(getResources().getDrawable(R.drawable.play1));
                     isPlay = false;
                     isFirst = false;
                     player.seekTo(0);
                     player.pause();
-                }
-                else{
+                } else {
                     return;
                 }
             }
@@ -277,28 +293,66 @@ public class PlayingActivity extends ActionBarActivity {
     private void clickEdit()
     {
         edit.setOnClickListener(new View.OnClickListener() {
-            EditText editText = new EditText(context);
 
             @Override
-            public void onClick(View v) {
-                new AlertDialog.Builder(context)
-                        .setTitle("Name")
-                        .setView(editText)
-                        .setPositiveButton("Save", new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                String newFileName = editText.getText().toString();
-                                File oldFile = new File(Environment.getExternalStorageDirectory() + "/Recordings/" + fileName);
-                                File newFile = new File(Environment.getExternalStorageDirectory() + "/Recordings/" + newFileName + getFileFormat());
-                                oldFile.renameTo(newFile);
-                                txtFileName.setText(newFileName);
-                                fileName = newFileName + getFileFormat();
-                            }
-                        })
-                        .setNegativeButton("Cancel", null)
-                        .show();
-            }
-        });
+                public void onClick(View view) {
+
+                final android.support.v7.app.AlertDialog.Builder builderR = new android.support.v7.app.AlertDialog.Builder(context);
+                builderR.setTitle("Rename file");
+                builderR.setCancelable(true);
+
+                final EditText input = new EditText(context);
+                builderR.setView(input);
+                builderR.setPositiveButton("Save", new DialogInterface.OnClickListener() {
+
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        if (input.getText().toString().equals("")) {
+                            Toast.makeText(context, "Please enter a name for the file", Toast.LENGTH_LONG);
+                        } else {
+                            String newFileName = input.getText().toString();
+                            File oldFile = new File(Environment.getExternalStorageDirectory() + "/Recordings/" + fileName);
+                            File newFile = new File(Environment.getExternalStorageDirectory() + "/Recordings/" + newFileName + getFileFormat());
+                            oldFile.renameTo(newFile);
+                            txtFileName.setText(newFileName);
+                            fileName = newFileName + getFileFormat();
+                            Toast.makeText(context, "Renamed successfully", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+
+                builderR.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                });
+
+                builderR.create().show();
+
+//                new android.support.v7.app.AlertDialog.Builder(context)
+//                        .setCancelable(false)
+//                        .setTitle("Name")
+//                        .setView(editText)
+//                        .setPositiveButton("Save", new DialogInterface.OnClickListener() {
+//                            @Override
+//                            public void onClick(DialogInterface dialog, int which) {
+//                                String newFileName = editText.getText().toString();
+//                                File oldFile = new File(Environment.getExternalStorageDirectory() + "/Recordings/" + fileName);
+//                                File newFile = new File(Environment.getExternalStorageDirectory() + "/Recordings/" + newFileName + getFileFormat());
+//                                oldFile.renameTo(newFile);
+//                                txtFileName.setText(newFileName);
+//                                fileName = newFileName + getFileFormat();
+//                                Toast.makeText(context, "Renamed successfully", Toast.LENGTH_SHORT).show();
+//
+//                                dialog.dismiss();
+//                            }
+//                        })
+//                        .setNegativeButton("Cancel", null)
+//                        .show();
+               }
+          });
     }
 
     private String getFileFormat()

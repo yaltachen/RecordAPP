@@ -23,12 +23,29 @@
             android:text="fileName"
             android:textSize="20dp"
             />
-        <TextView
-            android:id = "@+id/item_tvTime"
+
+        <LinearLayout
+            android:orientation="horizontal"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="(00:10)"
-            android:textSize="10dp"
-            />
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:id = "@+id/item_tvTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="(00:10)"
+                android:textSize="10dp"
+                />
+
+            <TextView
+                android:id="@+id/item_tvDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="01/01/2000"
+                android:textSize="10dp"
+                android:layout_marginLeft="170dp" />
+
+        </LinearLayout>
+
     </LinearLayout>
 </LinearLayout>
